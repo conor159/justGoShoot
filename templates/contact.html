@@ -1,0 +1,112 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+        <script src="static/jquery.js"></script>
+        <link href="https://fonts.googleapis.com/css2?family=EB+Garamond&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="static/style.css" />
+      </head>
+        <title>Just Go Shoot</title>
+    </head>
+    <body>
+
+        <nav class="navbar navbar-expand-md navbar-dark navbar-lightBlue">
+            <a id = "logo" class="navbar-brand abs" href="/index"><img  src="static/images/logo.svg"  > </a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#collapsingNavbar">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="container">
+                <!-- for some reason this container brings in the links into the middle 1/3rd dont remove -->
+                <div class="navbar-collapse collapse" id="collapsingNavbar">
+                    <ul class="navbar-nav nav-bar ml-65">
+                        <li class="nav-item ">
+                                <a class="nav-link" href="/index">Home</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/wedding-guide">Wedding Guide</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/blog" data-toggle="collapse"> </a>
+                        </li>
+                    </ul>
+                    <ul class="navbar-nav ml-auto">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/gallery" data-target="#myModal" data-toggle="modal">Gallery</a>
+                        </li>
+                        <li class="nav-item active">
+                            <a class="nav-link"style="padding-right: 75px;" href="/contact" data-target="#myModal" data-toggle="modal">Contact</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+
+
+
+        
+
+        <div id ="top" class="container">
+            <div class="mt-5">
+                <div class="row">
+                    <div class="col-4">
+                        <h2>How To Get In Touch</h2>
+                        <br>
+                        <h5>Phone: 083 137 1909 </h5>
+                        <h5>Email: niamh20399@gmail.com</h5>
+
+                        <h5>Follow me on: <a  id = "socalPadding" href="https://www.facebook.com/Just-go-shoot-105543877931736"> <img src="static/images/facebook.png" width="24px" ></a> <a href="https://www.instagram.com/niamh20399/?hl=en"><img src="static/images/instagram.png" width="24px"></a></h5>
+                        <br>
+                        <h2 class="mt-5">Location</h2>
+                        <iframe id ="googleMaps" src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d18974.18698582033!2d-7.361459604548937!3d53.526104182523774!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x485dc011ca1bd721%3A0xa00c7a997319480!2sMullingar%2C%20Co.%20Westmeath!5e0!3m2!1sen!2sie!4v1602512699839!5m2!1sen!2sie" width="600" height="450" frameborder="0" style="border:0;" allowfullscreen="" aria-hidden="false" tabindex="0"></iframe>
+
+                    </div>
+
+                    <div class="col-3">
+                        col2
+                    </div>
+                    <div class="col-5">
+                        <h2>Contact Me</h2>
+                               <form action="/contactForm" method="POST">
+
+
+                                   <div class="form-group">
+                                       <input type="text" class="form-control" name="name" id="name" placeholder="Name"></input>
+                                   </div>
+                                   <div class="form-group">
+                                       <input type="email" class="form-control" name="email" id="email" placeholder="Email"></input>
+                                   </div>
+                                   <div class="form-group">
+                                       <input type="text" class="form-control" name="phone" id="phone" placeholder="Phone Number"></input>
+                                   </div>
+                                   <div class="form-group">
+                                       <select  class="form-control" name="serviceDropDown" id="serviceDropDown" placeholder="Service Required"></input>
+                                            <option>Wedding</option>
+                                            <option>First Communion</option>
+                                            <option>Portrait</option>
+                                            <option>Birthday</option>
+                                            <option>Other</option>
+                                       </select>
+                                   </div>
+
+                                   <div class="form-group">
+                                       <textarea type="text" class="form-control" name="contactText" id="contactText" placeholder="I would book a... "></textarea> 
+                                   </div>
+
+                                   <button type="submit" class="btn btn-primary">Submit</button>
+                                   </div>
+                                </form>                 
+
+                    </div>
+
+
+                </div>
+            </div>
+
+
+        </div>
+    </body>
+</html>
