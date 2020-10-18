@@ -8,10 +8,9 @@
         {
             position: absolute;
             left:  50%;
-            margin-left: - 50px;
-            margin-left:  -50px !important;
+            margin-left:  -60px !important;
             display: block;
-            margin-top: 90px;
+            margin-top: 95px;
             
         }
     }
@@ -69,3 +68,8 @@ p,h1,h2,h3,h4,h5,h6 {
 #socalPadding{
     padding-left: 10px;
 }
+
+body{
+    background-color: #fbfbfb;
+}
+

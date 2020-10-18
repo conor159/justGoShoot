@@ -13,4 +13,9 @@ $(function () {
         $('#img'+k).attr('src', 'static/images/image'+imageList[i]+'.jpg').fadeIn(randNumber);
         i++;
     }
+
+    //lazy loading images on gallery page to improve load times
+    $('.lazy').Lazy();
+
 });
+
