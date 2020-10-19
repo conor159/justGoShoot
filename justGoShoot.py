@@ -3,6 +3,8 @@ import yagmail
 import mysql.connector
 from flask import Flask, render_template, request , url_for , redirect ,session ,g # g stands for global
 from functools import wraps
+import psutil
+import pieMaker
 
 #mysql login 
 mydb = mysql.connector.connect(
@@ -70,7 +72,8 @@ def admin_login():
 
     if len(records) == 1:
         session["admin"] = "admin"
-        return render_template("admin_loged_in_page.html", admin=session["admin"])
+
+        return render_template("admin_loged_in_page.html", admin=session["admin"], storage = storage())
     
     return redirect(url_for('admin_login_page'))
 
@@ -78,7 +81,7 @@ def admin_login():
 @app.route("/admin_loged_in_page")
 def loged_in_admin():
     if session.get("admin") == "admin":
-        return render_template('admin_loged_in_page.html', admin = session.get("admin") )
+        return render_template('admin_loged_in_page.html', admin = session.get("admin") , storage=storage() )
     return render_template('admin_login_page.html')
 
 @app.route("/client_page")
@@ -89,6 +92,13 @@ def client_page():
 def logout():
     session.clear()
     return redirect(url_for("index"))
+
+
+def storage():
+    hdd = psutil.disk_usage('/')
+    pieMaker.createLogoPie()
+    return {"diskSpaceRemainingGB" : ( hdd.free // 2**30) }
+
 
 def createEmail(name,email,phone,serviceDropDown,contactText):
     try:
