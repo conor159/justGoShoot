@@ -1,10 +1,13 @@
 #!/usr/bin/python3
 import yagmail
 import mysql.connector
-from flask import Flask, render_template, request , url_for , redirect ,session ,g # g stands for global
+from flask import Flask, render_template, request , url_for , redirect ,session ,g 
+from werkzeug.utils import secure_filename
 from functools import wraps
 import psutil
 import pieMaker
+import os
+import pathlib
 
 #mysql login 
 mydb = mysql.connector.connect(
@@ -16,6 +19,8 @@ mydb = mysql.connector.connect(
 
 app = Flask(__name__)
 app.secret_key="7:b]&E3K~8?_UK[2"
+app.config['UPLOAD_EXTENSIONS'] = ['.jpg', '.png', '.gif']
+app.config["UPLOAD_PATH"] = "uploaded_images" #where finshed clinet photos go for a while
 
 
 
@@ -73,7 +78,7 @@ def admin_login():
     if len(records) == 1:
         session["admin"] = "admin"
 
-        return render_template("admin_loged_in_page.html", admin=session["admin"], storage = storage())
+        return render_template("admin_loged_in_page.html", admin= session["admin"], storage = storage() )
     
     return redirect(url_for('admin_login_page'))
 
@@ -81,7 +86,7 @@ def admin_login():
 @app.route("/admin_loged_in_page")
 def loged_in_admin():
     if session.get("admin") == "admin":
-        return render_template('admin_loged_in_page.html', admin = session.get("admin") , storage=storage() )
+        return render_template('admin_loged_in_page.html', admin = session.get("admin") , storage = storage() )
     return render_template('admin_login_page.html')
 
 @app.route("/client_page")
@@ -93,6 +98,31 @@ def logout():
     session.clear()
     return redirect(url_for("index"))
 
+@app.route("/photo_upload", methods=["POST"])
+def photo_upload():
+    name = request.form['user_name']
+    folder_name = request.form['folder_name']
+    email = request.form['email']
+    images = request.files.getlist("images")
+    print(name, folder_name, email)
+    print(images)
+
+    for image in images:
+        #create dir on dec then add photos to it 
+        imageName = secure_filename(image.filename)
+        pathlib.Path(app.config['UPLOAD_PATH'], folder_name).mkdir(exist_ok=True)
+        if imageName != "":
+            imageExt = os.path.splitext(imageName)[1] 
+            if imageExt not in app.config['UPLOAD_EXTENSIONS']:
+                abort(400)
+            else:
+                print(image)
+                image.save(os.path.join(app.config['UPLOAD_PATH'] ,  folder_name , imageName))
+    
+    #decription is going to be folder name if same dec then goes into same folder
+
+
+    return render_template('admin_loged_in_page.html', admin = session.get("admin") , storage = storage() )
 
 def storage():
     hdd = psutil.disk_usage('/')
