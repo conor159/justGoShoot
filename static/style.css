@@ -78,7 +78,9 @@ body{
     margin-top: 200px;
 }
 
-
-input{
+#scrollableUploads{ 
+    margin-top: 100px;
+    overflow-y:  scroll;
+    background-color: white;
 
 }

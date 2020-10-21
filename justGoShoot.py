@@ -1,13 +1,16 @@
 #!/usr/bin/python3
 import yagmail
 import mysql.connector
-from flask import Flask, render_template, request , url_for , redirect ,session ,g 
+from flask import Flask, render_template, request , url_for , redirect ,session ,g  , flash , send_from_directory  ,send_file
 from werkzeug.utils import secure_filename
 from functools import wraps
 import psutil
 import pieMaker
 import os
 import pathlib
+import datetime
+import bcrypt
+import random
 
 #mysql login 
 mydb = mysql.connector.connect(
@@ -17,7 +20,8 @@ mydb = mysql.connector.connect(
     database='justGoShootDB'
 )
 
-app = Flask(__name__)
+#app = Flask(__name__)
+app = Flask(__name__, instance_path='/home/conor/justGoShoot/justGoShoot/uploaded_images')
 app.secret_key="7:b]&E3K~8?_UK[2"
 app.config['UPLOAD_EXTENSIONS'] = ['.jpg', '.png', '.gif']
 app.config["UPLOAD_PATH"] = "uploaded_images" #where finshed clinet photos go for a while
@@ -63,7 +67,6 @@ def admin_login():
     userName = request.form['user_name']
     userPassword = request.form['password']
 
-
     #lookup password user name in db
     #'admin'@'localhost' identified by 'ThisIsMysqlLogin2020!';
     #use justGoShootDB
@@ -104,6 +107,12 @@ def photo_upload():
     folder_name = request.form['folder_name']
     email = request.form['email']
     images = request.files.getlist("images")
+
+    if( name== "" or folder_name == "" or email == "" ):
+        #implement later
+        flash("missing parameter(s)")
+        return render_template('admin_loged_in_page.html', admin = session.get("admin") , storage = storage() )
+
     print(name, folder_name, email)
     print(images)
 
@@ -116,13 +125,32 @@ def photo_upload():
             if imageExt not in app.config['UPLOAD_EXTENSIONS']:
                 abort(400)
             else:
-                print(image)
                 image.save(os.path.join(app.config['UPLOAD_PATH'] ,  folder_name , imageName))
-    
-    #decription is going to be folder name if same dec then goes into same folder
 
-
+    addUserToDB(name,folder_name,email)
     return render_template('admin_loged_in_page.html', admin = session.get("admin") , storage = storage() )
+
+
+@app.route("/uploaded_images/<folderName>/<fileName>" )
+def uploaded_images(folderName, fileName):
+    return send_from_directory( os.path.join(app.instance_path, folderName), fileName )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 def storage():
     hdd = psutil.disk_usage('/')
@@ -138,8 +166,26 @@ def createEmail(name,email,phone,serviceDropDown,contactText):
         print("error in sending email yell at Conor")
 
 
+def addUserToDB(name, folder_name, email):
+    mycursor = mydb.cursor()
+    pubDate = datetime.datetime.now() 
+    #rand here
+    pin = random.randint(1,10000)
+    pin = genPassword(str(pin))
+
+    query = """insert into finshedProjects (user_name, user_email,  pubDate , published, pin , folder_name)  values  (%s, %s ,%s, %s, %s, %s )"""
+    vals = ( name,  email , pubDate ,"0", pin, folder_name)
+    mycursor.execute( query , vals ) 
+    mydb.commit()
+    print("added "+ folder_name  +" to finshed projects")
     
 
+def genPassword(pin):
+    pin = pin.encode('utf-8')
+    return bcrypt.hashpw(pin, bcrypt.gensalt(12))
+
+def checkPassword(proviededPin, hashedPassword):
+    return bcrypt.checkpw(proviededPin, hashedPassword )
 
 if __name__ == 'main':
         app.run(debug=True)

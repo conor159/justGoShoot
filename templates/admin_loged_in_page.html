@@ -57,17 +57,43 @@
 
         <div class="container" >
             <div class="row" >
-                <div class="col-7-lg" >
-                <form method="post" action="/photo_upload" id="imageUpload" enctype="multipart/form-data">
+                <div class="col-12-lg" >
+                <form class = "form-inline" method="post" action="/photo_upload" id="imageUpload" enctype="multipart/form-data">
                     <div class="form-group">
-                       <input name="images" type="file"  multiple="" style="background-color: white; border: 1px solid black; ">
-                        <input name="user_name" type="text" id="name" placeholder="Client Name">
-                        <input name="folder_name" type="text" id="folder_name" placeholder="Folder Name">
-                        <input name="email" type="text" id="email" placeholder="Email">
-                        <input type="submit" value="Upload">
+                       <input name="images" type="file" class="form-control" multiple="" >
+                    </div>
+                    <div class="form-group">
+                        <input name="user_name" type="text" class="form-control" id="name" placeholder="Client Name">
+                    </div>
+                    <div class="form-group">
+                        <input name="folder_name" type="text" class="form-control" id="folder_name" placeholder="Folder Name">
+                    </div>
+                    <div class="form-group">
+                        <input name="email" type="text" class="form-control" id="email" placeholder="Email">
+                    </div>
+                    <div class="form-group">
+                        <input class = "form-control" type="submit" value="Upload">
+                    </div>
                     </div>
                 </form>
             </div>
+        </div>
+
+
+        <div class="container">
+            <div class="row">
+                <div class="col-1">
+                </div>
+                <div id="scrollableUploads" class="col-10">
+                    test
+                </div>
+
+                <div class="col-1">
+                </div>
+
+            </div>
+
+
         </div>
 
 
