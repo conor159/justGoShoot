@@ -17,5 +17,16 @@ $(function () {
     //lazy loading images on gallery page to improve load times
     $('.lazy').Lazy();
 
+    var rick = 0;
+ //   document.getElementById("logo").addEventListener('click', rick())
+
+    $('#logo').on("click",function(){
+        rick++;
+        if(rick == 3){
+            window.location.replace("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+            rick = 0;
+        }
+    });
+
 });
 

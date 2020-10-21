@@ -133,7 +133,11 @@ def photo_upload():
 
 @app.route("/uploaded_images/<folderName>/<fileName>" )
 def uploaded_images(folderName, fileName):
-    return send_from_directory( os.path.join(app.instance_path, folderName), fileName )
+    if session.get("admin") == "admin":
+        return send_from_directory( os.path.join(app.instance_path, folderName), fileName )
+
+    else:
+        return ""
 
 
 
