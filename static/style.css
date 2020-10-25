@@ -82,5 +82,25 @@ body{
     margin-top: 100px;
     overflow-y:  scroll;
     background-color: white;
+    height: 50vh;
+    
+
+}
+
+
+#scrollableUploads img{ 
+    width: 125px;
+    height: auto;
+    vertical-align: top;
+}
+
+#scrollableUploads input{ 
+    width: 60px;
+    height: 19px;
+}
+
+
+tr:nth-child(even) {
+    background-color: rgb(120 191 201 / 4%);
 
 }

@@ -7,10 +7,12 @@ from functools import wraps
 import psutil
 import pieMaker
 import os
+from os import  listdir
 import pathlib
-import datetime
+import time
 import bcrypt
 import random
+import json
 
 #mysql login 
 mydb = mysql.connector.connect(
@@ -60,6 +62,9 @@ def client_login():
 
 @app.route("/admin_login_page")
 def admin_login_page():
+    if session.get('admin') == "admin":
+        return render_template('admin_loged_in_page.html', admin = session.get("admin") , storage = storage() )
+
     return render_template('admin_login_page.html')
 
 @app.route("/admin_login_post", methods=['POST'])
@@ -80,9 +85,9 @@ def admin_login():
 
     if len(records) == 1:
         session["admin"] = "admin"
-
         return render_template("admin_loged_in_page.html", admin= session["admin"], storage = storage() )
     
+    flash("Incorect username or password")
     return redirect(url_for('admin_login_page'))
 
 
@@ -141,8 +146,31 @@ def uploaded_images(folderName, fileName):
 
 
 
+@app.route("/user_data_json",  methods=["GET"])
+def user_data_json():
+    if session.get("admin") == "admin":
+        mycursor = mydb.cursor()
+        query = """select * from finshedProjects """
+        mycursor.execute( query )
+        records = mycursor.fetchall()
 
+        users = []
+        for record in records:  
+            filesList = listdir( os.path.join(app.config['UPLOAD_PATH'] , record[5] ))
+            user = {
+                "userName" : record[0],
+                "email" : record[1],
+                "pubDate" : record[2],
+                "published" : record[3],
+                "folderName" : record[5],
+                "files" :  filesList
+            }
+            users.append(user)
 
+        userJson = json.dumps(users)
+        return userJson
+
+    return "auth error"
 
 
 
@@ -172,7 +200,7 @@ def createEmail(name,email,phone,serviceDropDown,contactText):
 
 def addUserToDB(name, folder_name, email):
     mycursor = mydb.cursor()
-    pubDate = datetime.datetime.now() 
+    pubDate = time.time()
     #rand here
     pin = random.randint(1,10000)
     pin = genPassword(str(pin))

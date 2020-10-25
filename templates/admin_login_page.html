@@ -66,12 +66,26 @@
                                        <input type="password" class="form-control" name="password" id="password" placeholder="Password"></input>
                                    </div>
                                    <button type="submit" class="btn btn-primary">Submit</button>
+                                   <br>
+                                   <br>
+                                    {% with messages = get_flashed_messages() %}
+                                        {% if messages %}
+                                            <div class="flashes">
+                                            {% for message in messages %}
+                                                <p>{{message}}</p>
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                    {% endwith %}
                                    </div>
                                 </form>                 
+
+                                            
 
                     </div>
                 
             </div>
+
         </div>
 
 

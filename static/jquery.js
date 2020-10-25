@@ -18,7 +18,6 @@ $(function () {
     $('.lazy').Lazy();
 
     var rick = 0;
- //   document.getElementById("logo").addEventListener('click', rick())
 
     $('#logo').on("click",function(){
         rick++;
@@ -27,6 +26,10 @@ $(function () {
             rick = 0;
         }
     });
+
+
+    
+
 
 });
 
