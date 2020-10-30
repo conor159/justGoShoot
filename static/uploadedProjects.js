@@ -1,11 +1,13 @@
 $(function () {
-    //used to pop in user detales 
 
-   $.getJSON("/user_data_json", function(users){
+
+   $.getJSON("/fin_projects_json", function(users){
+       //fills in table on admin page 
        var checkBoxID = 0;
 
+
         $.each(users, function(user, values){
-            $thumbnail = values["files"][0];
+            $thumbnail = values["files"]
             $userName = values["userName"];
             $folderName = values["folderName"];
             $pubDate = values["pubDate"];
@@ -17,16 +19,61 @@ $(function () {
             var year = date.getFullYear();
             dateStr = day + '/' + month + "/" +  year;
 
-            var checkBox = '<td><input type="checkbox" id="pubCb' + String(checkBoxID++) + '"/></td>';
+            var checkBox = '<td><input type="checkbox"  class="pubCheckbox" id="pubCb_' + $folderName + '"/></td>';
             userText = '<td > ' + $userName + '</td >' +  ' <td> '+ dateStr +'</td> '  + '<td>' + $folderName + "</td>" ;
-            //userText = '<span class="userName"> ' + $userName + '</span >' +  ' <span class="date"> '+ dateStr +'</span> '  + '<span class="folderName">' + $folderName ;
 
-            //$('<div class="user"> <img   src=' +"uploaded_images/"+ $folderName + '/' + $thumbnail +  '> ' + userText +   checkBox + '  </div>').insertAfter('.insideScroll');
 
-            $('<tr>  <td><img   src=' +"uploaded_images/"+ $folderName + '/' + $thumbnail +  '></td>   ' + userText +   checkBox + '  </tr>').appendTo('table , #uploadsTable');
+            $('<tr>  <td><img id=' + $folderName + '  src=' +"uploaded_images/"+ $folderName + '/' + $thumbnail +  '></td>   ' + userText +   checkBox + '  </tr>').appendTo('table , #uploadsTable');
+            $("#pubCb_" + $folderName  ).prop('checked', Number( $published));
+
+            if( $published == "1"){
+                $("#pubCb_" + $folderName  ).prop('disabled', "readonly");
+            }
+
+        });
+    });
+});
+
+
+
+
+
+$(document).on( 'click', 'img', function () { 
+    console.log(this.id);
+    //gall go to page with args
+});
+
+
+$(document).on("change", ".pubCheckbox", function(){
+    if( $(this).prop("checked") == true){
+        var folderName = this.id.split("_")[1];
+        cbID = this;
+        $('#publishModal').modal('show');
+
+
+        $("#pubCancel").click(function (e) { 
+            $(cbID).prop( "checked", false);
         });
 
-    });
+        $("#pubSubmit").click(function (e) { 
+            $(cbID).prop('disabled', "readonly");
+            $('#publishModal').modal('hide');
+            $.post("/publish", {folder_name : folderName} );
+        });
+            
+        
 
-   
+    }
 });
+    
+   $.getJSON("/get_users", function(users){
+       // for autocomplete user email in upload 
+
+        userEmails = users.map(user => user.email);
+        $('#autocomplete').autocomplete({
+            lookup: userEmails,
+            onSelect: function (suggestion) {
+                console.log(userEmails);
+            }
+        });
+   });

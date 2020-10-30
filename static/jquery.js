@@ -27,7 +27,9 @@ $(function () {
         }
     });
 
-
+setTimeout( function(){
+    $(".flashes").fadeOut("fast") 
+}, 5000);
     
 
 

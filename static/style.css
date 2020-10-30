@@ -74,7 +74,7 @@ body{
 }
 
 
-#imageUpload {
+#createUser {
     margin-top: 200px;
 }
 
@@ -103,4 +103,14 @@ body{
 tr:nth-child(even) {
     background-color: rgb(120 191 201 / 4%);
 
+}
+
+.autocomplete-suggestions{
+    background-color: white;
+    background-origin: padding-box;
+}
+
+
+#createUserSub{
+    width:  174px;
 }
