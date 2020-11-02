@@ -30,6 +30,22 @@ app.secret_key="7:b]&E3K~8?_UK[2"
 app.config['UPLOAD_EXTENSIONS'] = ['.jpg', '.png', '.gif']
 app.config["UPLOAD_PATH"] = "uploaded_images" #where finshed clinet photos go for a while
 
+adminEmail = "conornugent96@gmail.com"
+emailPassword = ""
+justGoShootLink  = "http://127.0.0.1:5000"
+#todos need to check redirect endpoint things
+#imageine this is in red
+#setup tokens
+
+#need to create a delete function for old projects
+# need to create gallery for users
+# need to create gallary for admin
+
+#need to do testing 
+#need to have some sort of external file thing
+# add more todos
+
+
 
 
 @app.route("/")
@@ -59,10 +75,9 @@ def contactForm():
     serviceDropDown = request.form['serviceDropDown']
     contactText = request.form['contactText']
 
-    contactEmail(name,email,phone,serviceDropDown,contactText)
+    contactText  = contactText + "\n" +  "Name: " +  name + "\n Phone: " +  phone + "\n Email:" +  email
 
-    
-
+    contactEmail(email, name + " " + phone , contactText )
     return render_template('contact.html')
 
 @app.route("/client_login_page")
@@ -78,26 +93,35 @@ def admin_login_page():
 
 @app.route("/admin_login_post", methods=['POST'])
 def admin_login():
-    email = request.form['email']
-    userPassword = request.form['password']
-
     #lookup password user name in db
     #'admin'@'localhost' identified by 'ThisIsMysqlLogin2020!';
     #use justGoShootDB
     #create table users ( userName varchar(35), name varchar(35), password varchar(64) , admin varchar(1) )
     #niamh20399 | Niamh Meredith | password | 1
 
-    mycursor = mydb.cursor()
-    query = """select * from users where email=%s  and password=%s and admin = 1 """
-    mycursor.execute( query , (email, userPassword))
-    records = mycursor.fetchall()
+    email = request.form['email']
+    userPassword = request.form['password']
 
-    if len(records) == 1:
+    mycursor = mydb.cursor()
+    #query = """select * from users where email=%s  and password=%s and admin = 1 """
+    query = """select email , password , userID , admin from users where email=%s  and password=%s  """
+    mycursor.execute( query , (email, userPassword))
+    record = mycursor.fetchone()
+
+    if record[3] == "1":
+        #check if admin == 1 in table 
         session["admin"] = "admin"
         return render_template("admin_loged_in_page.html", admin= session["admin"], storage = storage() )
     
+    if email == records[0]:
+         render_template("user_gallary.html", admin = session[records[3]]  )
+        
     flash("Incorect email or password")
     return redirect(url_for('admin_login_page'))
+
+@app.route("/user_gallary")
+def user_gallary():
+    return render_template("user_gallary.html")
 
 
 @app.route("/admin_loged_in_page")
@@ -204,13 +228,11 @@ def publish():
         mydb.commit()
 
 
-        query = """ select email from users where userID = (     select   userID from finshedProjects where folder_name = %s limit 1 ) """
+        query = """ select email   from users where userID = (     select   userID from finshedProjects where folder_name = %s limit 1 ) """
         mycursor.execute( query , val)
         userEmail = mycursor.fetchone()
         userEmail = userEmail[0]
-
         mydb.free_result()
-        publishEmail(userEmail, folderName )
 
         
     return ""
@@ -218,42 +240,94 @@ def publish():
 
 
 
-def publishEmail( userEmail, folderName):
-    #createGalLink()
-    emailText = ""
+def publishEmail( userEmail, userName):
+    emailText = "Hi there " + userName + "your photos are avalable on Just Go Shoot where you can \n view and download them here once you create an account"
     try:
         yag = yagmail.SMTP(user="conornugent96@gmail.com" , password="putInLater")
         yag.send( to=userEmail, subject="Just Go Shoot" ,   contents=emailText  )
     except:
         print("error in sending email yell at Conor")
+    return
+
+
 
 
 
 @app.route("/create_user", methods=['POST'])
 def createUser():
     userEmail = request.form['new_user_email']
-    userName = request.form['new_user_name']
-    userPhone = request.form['new_user_phone']
-    if userEmail =="" or userName == "" :
-        return "enter email and name "
+    if userEmail == "":
+        return "enter user email"
 
-    letters = string.ascii_letters
-    userID =  ( ''.join(random.choice(letters) for i in range(32)) )
-    tempPassword =  ( ''.join(random.choice(letters) for i in range(12)) )
-    tmpPassword = genPassword(tempPassword)
+    token = randString()
+    createSetupToken( userEmail, token)
+    #creates a link and entery in db that will be deleteed once user creates first login 
 
+    #need to setup firstLogin endpoint
+    setupLink =' <a href =' + "'" + justGoShootLink + "/first_login?token=" + token  + "'"  + '> here</a>.'
+    subjectText = "Setup for Just Go Shoot"
+    content = "Click the link below to create an account so you can access your photos once they are published " + setupLink
+    sendToUserEmail( userEmail, subjectText, content)
+
+    '''
+    userID = randString()
     mycursor = mydb.cursor()
     query = """ insert into  users  (email , name,  password,  admin,   userID, phone) values   ( %s, %s, %s ,%s, %s, %s )"""
-    mycursor.execute( query , (userEmail, userName, tempPassword, 0,  userID , userPhone))
+    mycursor.execute( query , (userEmail, userName, "reset", 0,  userID , userPhone))
     mydb.commit()
     mycursor.close() 
+    
     flash(" Created New User: " + userEmail)
+    '''
     return redirect(url_for("admin_login_page"))
 
+def randString():
+    letters = string.ascii_letters
+    numbers = string.hexdigits
+
+    alfaNum = (letters , numbers)
+    longRandString =  ( ''.join(random.choice(letters) for i in range(128)) )
+    return longRandString
 
 
 
+def createSetupToken(email , token):
+    mycursor = mydb.cursor()
+    query = """insert into setupTokens ( email , token ) values (  %s , %s)"""
+    mycursor.execute( query , (email, token))
+    mydb.commit()
 
+
+
+@app.route("/first_login", methods=["GET"])
+def firstLogin():
+    #lookup db to see if link they clicked in email has a matching email
+    token  = request.args.get("token")
+    mycursor = mydb.cursor()
+    query = """select email, token from setupTokens where token = %s """
+    mycursor.execute( query , (token,))
+    tokenResult = mycursor.fetchone()
+
+
+    if tokenResult[1]  == token:
+        #right if the token matches send the user over to create a account
+        session["createAccount"] = token
+        return redirect( url_for("createAccount"))
+
+    #otherwide send them off to homepage
+    return redirect( url_for("index"))
+
+@app.route("/create_account")
+def createAccount():
+    if session.get('createAccount'):
+
+
+
+        return render_template("create_account.html")
+
+    return redirect(url_for("index"))
+
+       
 
 
 
@@ -289,18 +363,30 @@ def storage():
     return {"diskSpaceRemainingGB" : ( hdd.free // 2**30) }
 
 
-def contactEmail(name,email,phone,serviceDropDown,contactText):
+def sendToUserEmail(toEmail,  subjectText , content):
+    yag = yagmail.SMTP(user=adminEmail , password=emailPassword)
+    yag.send(to=toEmail, subject="Login for Just Go Shoot ",  contents=content)
+
+    '''
     try:
-        yag = yagmail.SMTP(user="conornugent96@gmail.com" , password="putInLater")
-        yag.send(to=email, subject=name + " , " + serviceDropDown, contents=contactText + "\n" + "\n Phone: " +  phone)
+        yag = yagmail.SMTP(user=adminEmail , password=emailPassword)
+        yag.send(to=toEmail, subject="Login for Just Go Shoot ",  contents=content)
     except:
-        print("error in sending email yell at Conor")
+        print("error in userEmail email yell at Conor")
+    '''
+
+
+def contactEmail(toEmail,subjectText, content):
+    try:
+        yag = yagmail.SMTP(user=adminEmail , password=emailPassword)
+        yag.send(to=adminEmail, subject=name + " , " + serviceDropDown, contents=contactText + "\n" + "\n Phone: " +  phone)
+    except:
+        print("error in sending contentEmail yell at Conor")
 
 
 def addEnteryToFinProjects( folder_name, email):
     mycursor = mydb.cursor()
     pubDate = time.time()
-    #rand here
 
     query = """select users.userID  from users where email  =  %s  """
     mycursor.execute( query , (email,) ) 
