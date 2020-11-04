@@ -1,1 +1,166 @@
-account createion page
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+        <script src="static/jquery.js"></script>
+        <link href="https://fonts.googleapis.com/css2?family=EB+Garamond&display=swap" rel="stylesheet">
+        <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/jquery.lazy/1.7.9/jquery.lazy.min.js"></script>
+        <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/jquery.lazy/1.7.9/jquery.lazy.min.js"></script>
+        <link rel="stylesheet" href="static/style.css" />
+      </head>
+        <link rel="icon" type="image/png" href="/static/images/favcon.png"/>
+        <title>Just Go Shoot</title>
+    </head>
+    <body>
+
+        <nav class="navbar navbar-expand-sm navbar-dark navbar-lightBlue">
+            <a id = "logo" class="navbar-brand abs" href="/index"><img  src="static/images/logo.svg"  > </a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#collapsingNavbar">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="container">
+                <!-- for some reason this container brings in the links into the middle 1/3rd dont remove -->
+                <div class="navbar-collapse collapse" id="collapsingNavbar">
+                    <ul class="navbar-nav nav-bar ml-65">
+                        <li class="nav-item ">
+                                <a class="nav-link" href="/index">Home</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/gallery" data-toggle="collapse">Gallery</a>
+                        </li>
+                    </ul>
+                    <ul class="navbar-nav ml-auto">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="/create_account" >Account Creation</a>
+                        </li>
+                        <li class="nav-item ">
+                            <a class="nav-link"style="padding-right: 75px;" href="/contact" data-target="#myModal" data-toggle="modal">Contact</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+
+
+
+        
+
+        <div id ="top" class="container">
+            <div class=" mt-sm-1 mt-4">
+                <div class="row">
+   
+
+                    <div class="col-3">
+                    </div>
+                    <div class="col-lg-6">
+                        <h2>Just Go Shoot Account Creation</h2>
+                               <form action="/account_form" method="POST">
+                                   <div class="form-group">
+                                       <input type="text" class="form-control" name="email" id="email" placeholder="Email"></input>
+                                   </div>
+
+                                   <div class="form-group">
+                                       <input type="text" class="form-control" name="name" id="name" placeholder="Name"></input>
+                                   </div>
+
+                                   <div class="form-group">
+                                       <input type="tel" class="form-control" name="phone" id="phone" placeholder="Phone Number"></input>
+                                   </div>
+
+                                   <br>
+
+                                   <div class="form-group">
+                                       <input type="text" class="form-control" name="addr1" id="addr1" placeholder="Address Line 1"></input>
+                                   </div>
+
+                                   <div class="form-group">
+                                       <input type="text" class="form-control" name="addr2" id="addr2" placeholder="Address Line 2"></input>
+                                   </div>
+
+                                   <div class="form-group">
+                                       <input type="text" class="form-control" name="addr3" id="addr3" placeholder="Address Line 3"></input>
+                                   </div>
+
+                                   <div class="form-group">
+                                       <select type="text" class="form-control" name="addr4" id="addr4" placeholder="Address Line 4">
+                                            <option value="antrim">Antrim</option>
+                                            <option value="armagh">Armagh</option>
+                                            <option value="carlow">Carlow</option>
+                                            <option value="cavan">Cavan</option>
+                                            <option value="clare">Clare</option>
+                                            <option value="cork">Cork</option>
+                                            <option value="derry">Derry</option>
+                                            <option value="donegal">Donegal</option>
+                                            <option value="down">Down</option>
+                                            <option value="dublin">Dublin</option>
+                                            <option value="fermanagh">Fermanagh</option>
+                                            <option value="galway">Galway</option>
+                                            <option value="kerry">Kerry</option>
+                                            <option value="kildare">Kildare</option>
+                                            <option value="kilkenny">Kilkenny</option>
+                                            <option value="laois">Laois</option>
+                                            <option value="leitrim">Leitrim</option>
+                                            <option value="limerick">Limerick</option>
+                                            <option value="longford">Longford</option>
+                                            <option value="louth">Louth</option>
+                                            <option value="mayo">Mayo</option>
+                                            <option value="meath">Meath</option>
+                                            <option value="monaghan">Monaghan</option>
+                                            <option value="offaly">Offaly</option>
+                                            <option value="roscommon">Roscommon</option>
+                                            <option value="sligo">Sligo</option>
+                                            <option value="tipperary">Tipperary</option>
+                                            <option value="tyrone">Tyrone</option>
+                                            <option value="waterford">Waterford</option>
+                                            <option selected value="westmeath">Westmeath</option>
+                                            <option value="wexford">Wexford</option>
+                                            <option value="wicklow">Wicklow</option>
+                                        </select>
+                                   </div>
+
+                                   <div class="form-group">
+                                       <input type="text" class="form-control" name="addr5" id="addr5" placeholder="EirCode"></input>
+                                   </div>
+
+
+
+                                   <br>
+
+                                   <div class="form-group">
+                                       <input type="password" class="form-control" name="password" id="password" placeholder="Password"></input>
+                                   </div>
+
+                                   <div class="form-group">
+                                       <input type="password" class="form-control" name="password1" id="password1" placeholder="Type Password Again"></input>
+                                   </div>
+                                   <button type="submit" class="btn btn-primary">Submit</button>
+                                   <br>
+                                   <br>
+                                    {% with messages = get_flashed_messages() %}
+                                        {% if messages %}
+                                            <div class="flashes">
+                                            {% for message in messages %}
+                                                <p>{{message}}</p>
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                    {% endwith %}
+                                   </div>
+                                </form>                 
+
+                                            
+
+                    </div>
+                
+            </div>
+
+        </div>
+
+
+        </div>
+    </body>
+</html>

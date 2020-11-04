@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 import yagmail
 import mysql.connector
-from flask import Flask, render_template, request , url_for , redirect ,session ,g  , flash , send_from_directory  ,send_file
+from flask import Flask, render_template, request , url_for , redirect ,session ,g  , flash , send_from_directory  ,send_file, make_response , Response
 from werkzeug.utils import secure_filename
 from functools import wraps
 import psutil
@@ -33,10 +33,10 @@ app.config["UPLOAD_PATH"] = "uploaded_images" #where finshed clinet photos go fo
 adminEmail = "conornugent96@gmail.com"
 emailPassword = ""
 justGoShootLink  = "http://127.0.0.1:5000"
-#todos need to check redirect endpoint things
-#imageine this is in red
-#setup tokens
 
+# need to create a user login and logout function 
+
+#todos need to check redirect endpoint things
 #need to create a delete function for old projects
 # need to create gallery for users
 # need to create gallary for admin
@@ -56,10 +56,6 @@ def index():
 
 @app.route("/gallary")
 def gallery():
-    if session.get("admin"):
-        request.args.get("folder_name")
-        return render_template('gallary_admin.html')
-
     return render_template('gallary.html')
 
 
@@ -86,38 +82,66 @@ def client_login():
 
 @app.route("/admin_login_page")
 def admin_login_page():
-    if session.get('admin') == "admin":
-        return render_template('admin_loged_in_page.html', admin = session.get("admin") , storage = storage() )
+    if userIsAdmin(request.cookies.get("userID")):
+        return render_template('admin_loged_in_page.html', storage = storage() )
 
     return render_template('admin_login_page.html')
 
 @app.route("/admin_login_post", methods=['POST'])
 def admin_login():
-    #lookup password user name in db
     #'admin'@'localhost' identified by 'ThisIsMysqlLogin2020!';
     #use justGoShootDB
-    #create table users ( userName varchar(35), name varchar(35), password varchar(64) , admin varchar(1) )
-    #niamh20399 | Niamh Meredith | password | 1
-
+    userPassword = ""
     email = request.form['email']
     userPassword = request.form['password']
-
+    userIDCookie = request.cookies.get("userID")
     mycursor = mydb.cursor()
-    #query = """select * from users where email=%s  and password=%s and admin = 1 """
-    query = """select email , password , userID , admin from users where email=%s  and password=%s  """
-    mycursor.execute( query , (email, userPassword))
-    record = mycursor.fetchone()
 
-    if record[3] == "1":
-        #check if admin == 1 in table 
-        session["admin"] = "admin"
-        return render_template("admin_loged_in_page.html", admin= session["admin"], storage = storage() )
-    
-    if email == records[0]:
-         render_template("user_gallary.html", admin = session[records[3]]  )
+    if userIDCookie:
+        print("Has Cookie")
+        record = getUserRecordByID(userIDCookie)
+        if(record):
+            result = login(record,userPassword, userIDCookie)
+
+    else:
+        query = """select email , name , phone , eircode , county , addr3 , addr2 , addr1 , password  , admin , userID from users where email=%s    """
+        print("No Cookie")
+        mycursor.execute( query , (email,))
+        record = mycursor.fetchone()
+        result = login(record, userPassword, False)
+
+    if result == "admin":
+        resp =  make_response( render_template("admin_loged_in_page.html",  storage = storage() ))
+        resp.set_cookie("userID", record[10] )
         
-    flash("Incorect email or password")
-    return redirect(url_for('admin_login_page'))
+        return resp
+
+    if result == "user":
+        resp =  make_response(render_template("user_gallary.html"))
+        resp.set_cookie("userID", record[10] )
+        return resp
+
+    return redirect(url_for("index"))
+
+
+
+def login(record, userPassword , userIDCookie ):
+    hashedPasswordMatch = checkPassword(userPassword, record[8])
+    if  userIDCookie:
+        if record[9]:
+            return "admin"
+
+    if not hashedPasswordMatch: 
+        return "wrongPassword"
+    if record[9] == "1":
+        print("admin page no cookie")
+        return "admin"
+    
+    if email == record[0]:
+        print("userGall")
+        return "user"
+    return "wrongPassword"
+
 
 @app.route("/user_gallary")
 def user_gallary():
@@ -126,18 +150,29 @@ def user_gallary():
 
 @app.route("/admin_loged_in_page")
 def loged_in_admin():
-    if session.get("admin") == "admin":
-        return render_template('admin_loged_in_page.html', admin = session.get("admin") , storage = storage() )
+    if userIsAdmin(request.cookies.get("userID")):
+    #userID is admin
+        return render_template('admin_loged_in_page.html',  storage = storage() )
     return render_template('admin_login_page.html')
 
 @app.route("/client_page")
 def client_page():
     return render_template('client_page.html')
 
+
+
+
 @app.route("/logout")
 def logout():
-    session.clear()
-    return redirect(url_for("index"))
+    response  = make_response(render_template("index.html"))
+    response.set_cookie("userID", expires=0)
+    return response
+
+
+
+
+
+
 
 @app.route("/photo_upload", methods=["POST"])
 def photo_upload():
@@ -148,7 +183,7 @@ def photo_upload():
     if email  == "" or folder_name == "" :
         #implement later
         flash("missing parameter(s)")
-        return render_template('admin_loged_in_page.html', admin = session.get("admin") , storage = storage() )
+        return render_template('admin_loged_in_page.html',  storage = storage() )
 
     for image in images:
         #create dir on dec then add photos to it 
@@ -162,17 +197,13 @@ def photo_upload():
                 image.save(os.path.join(app.config['UPLOAD_PATH'] ,  folder_name , imageName))
 
     addEnteryToFinProjects(folder_name,email)
-    return render_template('admin_loged_in_page.html', admin = session.get("admin") , storage = storage() )
+    return render_template('admin_loged_in_page.html',  storage = storage() )
 
 
 @app.route("/uploaded_images/<folderName>/<fileName>" )
 def uploaded_images(folderName, fileName):
-    if session.get("admin") == "admin":
-        return send_from_directory( os.path.join(app.instance_path, folderName), fileName )
-
-    else:
-        return ""
-
+    #security issue here fix in a bit
+    return send_from_directory( os.path.join(app.instance_path, folderName), fileName )
 
 
 @app.route("/fin_projects_json",  methods=["GET"])
@@ -180,14 +211,15 @@ def fin_projects_json():
     folderName = request.args.get('folder_name')
 
     #return a list of files in folder 
-    if session.get("admin") == "admin" and folderName:
+    admin = userIsAdmin(request.cookies.get("userID")) 
+    if admin and folderName:
         filesList = listdir( os.path.join(app.config['UPLOAD_PATH'] , folderName ))
         fileListJson = json.dumps(filesList)
         return fileListJson
 
 
     # return all users info and thumbnail
-    if session.get("admin") == "admin":
+    if admin:
         users = []
         #table stuff
 
@@ -219,7 +251,7 @@ def fin_projects_json():
 def publish():
     #need to pass text on here
     emailText = ""
-    if session.get("admin") == "admin":
+    if userIsAdmin(request.cookies.get("admin")):
         folderName = request.form['folder_name']
         mycursor = mydb.cursor()
         val = ( folderName,) #grrr tupple with only one item needs a , mysql excute requires tups
@@ -233,7 +265,6 @@ def publish():
         userEmail = mycursor.fetchone()
         userEmail = userEmail[0]
         mydb.free_result()
-
         
     return ""
 
@@ -241,9 +272,9 @@ def publish():
 
 
 def publishEmail( userEmail, userName):
-    emailText = "Hi there " + userName + "your photos are avalable on Just Go Shoot where you can \n view and download them here once you create an account"
+    nemailText = "Hi there " + userName + "your photos are avalable on Just Go Shoot where you can \n view and download them here once you create an account"
     try:
-        yag = yagmail.SMTP(user="conornugent96@gmail.com" , password="putInLater")
+        yag = yagmail.SMTP(user= adminEmail , password=emailPassword)
         yag.send( to=userEmail, subject="Just Go Shoot" ,   contents=emailText  )
     except:
         print("error in sending email yell at Conor")
@@ -255,31 +286,42 @@ def publishEmail( userEmail, userName):
 
 @app.route("/create_user", methods=['POST'])
 def createUser():
-    userEmail = request.form['new_user_email']
-    if userEmail == "":
-        return "enter user email"
+    if userIsAdmin(request.cookies.get("admin")):
+        userEmail = request.form['new_user_email']
+        if userEmail == "":
+            return "enter user email"
 
-    token = randString()
-    createSetupToken( userEmail, token)
-    #creates a link and entery in db that will be deleteed once user creates first login 
+        token = randString()
+        createSetupToken( userEmail, token)
+        #creates a link and entery in db that will be deleteed once user creates first login 
 
-    #need to setup firstLogin endpoint
-    setupLink =' <a href =' + "'" + justGoShootLink + "/first_login?token=" + token  + "'"  + '> here</a>.'
-    subjectText = "Setup for Just Go Shoot"
-    content = "Click the link below to create an account so you can access your photos once they are published " + setupLink
-    sendToUserEmail( userEmail, subjectText, content)
+        #need to setup firstLogin endpoint
+        setupLink =' <a href =' + "'" + justGoShootLink + "/first_login?token=" + token  + "'"  + '> here</a>.'
+        subjectText = "Setup for Just Go Shoot"
+        content = "Click the link below to create an account so you can access your photos once they are published " + setupLink
+        sendToUserEmail( userEmail, subjectText, content)
 
-    '''
-    userID = randString()
-    mycursor = mydb.cursor()
-    query = """ insert into  users  (email , name,  password,  admin,   userID, phone) values   ( %s, %s, %s ,%s, %s, %s )"""
-    mycursor.execute( query , (userEmail, userName, "reset", 0,  userID , userPhone))
-    mydb.commit()
-    mycursor.close() 
-    
-    flash(" Created New User: " + userEmail)
-    '''
-    return redirect(url_for("admin_login_page"))
+        return redirect(url_for("admin_login_page"))
+    return redirect(render_template('index.html'))
+
+
+
+def getUserRecordByID(userID):
+        mycursor = mydb.cursor()
+        query = """select email , name , phone , eircode , county, addr3 , addr2 , addr1, password , admin , userID  from users where userID=%s    """
+        mycursor.execute(query, (userID,))
+        record = mycursor.fetchone()
+        return record
+
+
+def userIsAdmin(userID):
+    userRecord =  getUserRecordByID(userID)
+    if(userRecord):
+        #fix without row index later 
+        return int(userRecord[9])
+    return False
+
+
 
 def randString():
     letters = string.ascii_letters
@@ -308,8 +350,10 @@ def firstLogin():
     mycursor.execute( query , (token,))
     tokenResult = mycursor.fetchone()
 
+    if  tokenResult  == None :
+        return redirect(url_for('index'))
 
-    if tokenResult[1]  == token:
+    if tokenResult[1] == token:
         #right if the token matches send the user over to create a account
         session["createAccount"] = token
         return redirect( url_for("createAccount"))
@@ -320,11 +364,7 @@ def firstLogin():
 @app.route("/create_account")
 def createAccount():
     if session.get('createAccount'):
-
-
-
         return render_template("create_account.html")
-
     return redirect(url_for("index"))
 
        
@@ -333,24 +373,26 @@ def createAccount():
 
 @app.route("/get_users", methods=['GET'])
 def getUsers():
-    if session["admin"] == "admin":
-        #return json with all user detales
+    if userIsAdmin(request.cookies.get("admin")):
         mycursor = mydb.cursor()
-        query = """ select users.email , users.name, users.phone from users """
-        mycursor.execute( query )
+        query = "select * from users"
+        mycursor.execute(query)
         records = mycursor.fetchall()
-        users = []
-        for record in records:  
-            user = {
-                "email" : record[0],
-                "name" : record[1],
-                "phone" : record[2]
-            }
-            users.append(user)
+        #might be a good idea to put address in here
+        if userIsAdmin(request.cookies.get("userID")):
+            users = []
+            for record in records:  
+                user = {
+                    "email" : record[0],
+                    "name" : record[1],
+                    "phone" : record[2]
+                }
+                users.append(user)
 
-        userJson = json.dumps(users)
-        mycursor.close()
-        return  userJson
+            userJson = json.dumps(users)
+            mycursor.close()
+            return  userJson
+
     return "auth error"
 
 
@@ -367,13 +409,42 @@ def sendToUserEmail(toEmail,  subjectText , content):
     yag = yagmail.SMTP(user=adminEmail , password=emailPassword)
     yag.send(to=toEmail, subject="Login for Just Go Shoot ",  contents=content)
 
-    '''
-    try:
-        yag = yagmail.SMTP(user=adminEmail , password=emailPassword)
-        yag.send(to=toEmail, subject="Login for Just Go Shoot ",  contents=content)
-    except:
-        print("error in userEmail email yell at Conor")
-    '''
+@app.route('/account_form', methods=["POST"])
+def accountForm():
+    if session.get("createAccount"):
+        email = request.form['email']
+        name = request.form['name']
+        phone = request.form['phone']
+        addr1 = request.form['addr1']
+        addr2 = request.form['addr2']
+        addr3 = request.form['addr3']
+        county = request.form['addr4']
+        eircode = request.form['addr5']
+        password = request.form['password']
+        password1 = request.form['password1']
+
+        if password != password1 or  len(password) < 9:
+            #flash 
+            return redirect( url_for("createAccount") )
+
+        #finaly adding user to db
+        userID = randString()
+        mycursor = mydb.cursor()
+        query = """ insert into  users  (email , name,  phone,  eircode,   county ,addr3, addr2,  addr1 , password, admin , userID) values   ( %s, %s ,%s, %s, %s, %s, %s, %s,%s,%s, %s  )"""
+        mycursor.execute( query , ( email , name , phone ,eircode , county, addr3, addr2, addr1, genPassword(password) , "0" ,  userID))
+
+        query = """ delete from setupTokens where email = %s """
+        mycursor.execute( query , (email, ))
+        mydb.commit()
+        mycursor.close() 
+        
+        session.clear()
+        session[userID] = userID
+        flash(" Created New User: " + email)
+
+        return redirect(url_for("gallery")) 
+    return redirect(url_for("index"))
+
 
 
 def contactEmail(toEmail,subjectText, content):
@@ -399,7 +470,6 @@ def addEnteryToFinProjects( folder_name, email):
     mydb.commit()
     mycursor.close()
 
-    #print("added "+ folder_name  +" to finshed projects")
     
 
 def genPassword(password):
@@ -407,7 +477,11 @@ def genPassword(password):
     return bcrypt.hashpw(password, bcrypt.gensalt(12))
 
 def checkPassword(providedPassword, hashedPassword):
-    return bcrypt.checkpw(proviedPassword, hashedPassword )
+    providedPassword = providedPassword.encode('utf-8')
+    hashedPassword = hashedPassword.encode('utf-8')
+    return bcrypt.checkpw(providedPassword, hashedPassword )
+
+
 
 if __name__ == 'main':
         app.run(debug=True)
