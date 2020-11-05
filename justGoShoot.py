@@ -54,9 +54,9 @@ def index():
     return render_template('index.html')
 
 
-@app.route("/gallary")
+@app.route("/gallery")
 def gallery():
-    return render_template('gallary.html')
+    return render_template('gallery.html')
 
 
 @app.route("/contact")
@@ -83,7 +83,10 @@ def client_login():
 @app.route("/admin_login_page")
 def admin_login_page():
     if userIsAdmin(request.cookies.get("userID")):
-        return render_template('admin_loged_in_page.html', storage = storage() )
+        return redirect(url_for('loged_in_admin', storage = storage() ))
+
+    if request.cookies.get("userID"):
+        return redirect(url_for('user_gallary'))
 
     return render_template('admin_login_page.html')
 
@@ -95,52 +98,27 @@ def admin_login():
     email = request.form['email']
     userPassword = request.form['password']
     userIDCookie = request.cookies.get("userID")
-    mycursor = mydb.cursor()
+    mycursor = mydb.cursor(buffered=True)
 
-    if userIDCookie:
-        print("Has Cookie")
-        record = getUserRecordByID(userIDCookie)
-        if(record):
-            result = login(record,userPassword, userIDCookie)
+    query = """select email , name , phone , eircode , county , addr3 , addr2 , addr1 , password  , admin , userID from users where email=%s    """
+    mycursor.execute( query , (email,))
+    record = mycursor.fetchone()
+    hashedPasswordMatch = checkPassword(userPassword, record[8])
 
-    else:
-        query = """select email , name , phone , eircode , county , addr3 , addr2 , addr1 , password  , admin , userID from users where email=%s    """
-        print("No Cookie")
-        mycursor.execute( query , (email,))
-        record = mycursor.fetchone()
-        result = login(record, userPassword, False)
-
-    if result == "admin":
+    if record[9] == "1" and hashedPasswordMatch: 
         resp =  make_response( render_template("admin_loged_in_page.html",  storage = storage() ))
         resp.set_cookie("userID", record[10] )
-        
         return resp
 
-    if result == "user":
-        resp =  make_response(render_template("user_gallary.html"))
+    if hashedPasswordMatch:
+        resp =  make_response(redirect(url_for("user_gallary")))
         resp.set_cookie("userID", record[10] )
         return resp
 
-    return redirect(url_for("index"))
+    return redirect(url_for("admin_login_page"))
 
 
 
-def login(record, userPassword , userIDCookie ):
-    hashedPasswordMatch = checkPassword(userPassword, record[8])
-    if  userIDCookie:
-        if record[9]:
-            return "admin"
-
-    if not hashedPasswordMatch: 
-        return "wrongPassword"
-    if record[9] == "1":
-        print("admin page no cookie")
-        return "admin"
-    
-    if email == record[0]:
-        print("userGall")
-        return "user"
-    return "wrongPassword"
 
 
 @app.route("/user_gallary")
@@ -307,7 +285,7 @@ def createUser():
 
 
 def getUserRecordByID(userID):
-        mycursor = mydb.cursor()
+        mycursor = mydb.cursor(buffered=True)
         query = """select email , name , phone , eircode , county, addr3 , addr2 , addr1, password , admin , userID  from users where userID=%s    """
         mycursor.execute(query, (userID,))
         record = mycursor.fetchone()
