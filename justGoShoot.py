@@ -34,18 +34,18 @@ adminEmail = "conornugent96@gmail.com"
 emailPassword = ""
 justGoShootLink  = "http://127.0.0.1:5000"
 
-# need to create a user login and logout function 
+
 
 #todos need to check redirect endpoint things
 #need to create a delete function for old projects
-# need to create gallery for users
-# need to create gallary for admin
 
 #need to do testing 
 #need to have some sort of external file thing
-# add more todos
+#block same folder entery
 
-
+#current --------------------------
+#double photo upload error is a thing
+#add bufferd to everthing
 
 
 @app.route("/")
@@ -78,6 +78,7 @@ def contactForm():
 
 @app.route("/client_login_page")
 def client_login():
+
     return render_template('client_login_page.html')
 
 @app.route("/admin_login_page")
@@ -86,7 +87,7 @@ def admin_login_page():
         return redirect(url_for('loged_in_admin', storage = storage() ))
 
     if request.cookies.get("userID"):
-        return redirect(url_for('user_gallary'))
+        return redirect(url_for('user_gallery'))
 
     return render_template('admin_login_page.html')
 
@@ -111,7 +112,7 @@ def admin_login():
         return resp
 
     if hashedPasswordMatch:
-        resp =  make_response(redirect(url_for("user_gallary")))
+        resp =  make_response(redirect(url_for("user_gallery")))
         resp.set_cookie("userID", record[10] )
         return resp
 
@@ -121,9 +122,15 @@ def admin_login():
 
 
 
-@app.route("/user_gallary")
-def user_gallary():
-    return render_template("user_gallary.html")
+@app.route("/user_gallery")
+def user_gallery():
+    userID = request.cookies.get("userID")
+    if userPubList(userID):
+        return render_template("user_gallery.html")
+    return redirect(url_for("index"))
+
+
+
 
 
 @app.route("/admin_loged_in_page")
@@ -180,32 +187,58 @@ def photo_upload():
 
 @app.route("/uploaded_images/<folderName>/<fileName>" )
 def uploaded_images(folderName, fileName):
-    #security issue here fix in a bit
-    return send_from_directory( os.path.join(app.instance_path, folderName), fileName )
+    userID = request.cookies.get("userID")
+    if userIsAdmin(userID):
+        return send_from_directory( os.path.join(app.instance_path, folderName), fileName )
+
+    mycursor = mydb.cursor(buffered=True)
+    query = """ select userID  from finshedProjects where folder_name = %s  and userID = %s     """
+    #check to see if user is autherised to view this folder
+    result = mycursor.execute(query,(folderName, userID))
+    mycursor.close()
+
+
+    if userID == result[0]:
+        return send_from_directory( os.path.join(app.instance_path, folderName), fileName )
+    return ""
 
 
 @app.route("/fin_projects_json",  methods=["GET"])
 def fin_projects_json():
     folderName = request.args.get('folder_name')
-
-    #return a list of files in folder 
+    #return a list of files in folder  if supliyed a folder name
     admin = userIsAdmin(request.cookies.get("userID")) 
     if admin and folderName:
         filesList = listdir( os.path.join(app.config['UPLOAD_PATH'] , folderName ))
         fileListJson = json.dumps(filesList)
         return fileListJson
 
+    listOfAuthFolders = userPubList(request.cookies.get("userID"))
+    # get a list of folders that the user is autherised to view 
+    if listOfAuthFolders: 
+        folders = []
+        print(listOfAuthFolders)
+        for folder in listOfAuthFolders:
+            #go though the folders and return json 
+            filesList = listdir( os.path.join(app.config['UPLOAD_PATH'] , folder ))
+            folderDict = {
+                "folderName" : folder,
+                "files" :  filesList
+            }
+            folders.append(folderDict)
+        fileListJson = json.dumps(folders)
+        print(fileListJson)
+        return fileListJson
 
     # return all users info and thumbnail
     if admin:
         users = []
         #table stuff
 
-        finCursor = mydb.cursor()
-        query = """  select u.name, u.phone, fin.pubDate, fin.folder_name, fin.published from users as u , finshedProjects as fin where u.userId = fin.userId """
-        finCursor.execute( query )
-        records = finCursor.fetchall()
-
+        mycursor = mydb.cursor()
+        query = """  select u.name, u.phone, fin.pubDate, fin.folder_name, fin.published , u.email from users as u , finshedProjects as fin where u.userId = fin.userId """
+        mycursor.execute( query )
+        records = mycursor.fetchall()
         for record in records:  
             filesList = listdir( os.path.join(app.config['UPLOAD_PATH'] , record[3] ))
             user = {
@@ -213,13 +246,14 @@ def fin_projects_json():
                 "phone" : record[1],
                 "pubDate" : record[2],
                 "folderName" : record[3],
+                "email" :  record[5],
                 "published" : record[4],
                 "files" :  filesList[0]
             }
             users.append(user)
 
         userJson = json.dumps(users)
-        finCursor.close()
+        mycursor.close()
         return userJson
     # where will later return user photos if published and pin is correct
     return "auth error"
@@ -229,7 +263,7 @@ def fin_projects_json():
 def publish():
     #need to pass text on here
     emailText = ""
-    if userIsAdmin(request.cookies.get("admin")):
+    if userIsAdmin(request.cookies.get("userID")):
         folderName = request.form['folder_name']
         mycursor = mydb.cursor()
         val = ( folderName,) #grrr tupple with only one item needs a , mysql excute requires tups
@@ -289,6 +323,8 @@ def getUserRecordByID(userID):
         query = """select email , name , phone , eircode , county, addr3 , addr2 , addr1, password , admin , userID  from users where userID=%s    """
         mycursor.execute(query, (userID,))
         record = mycursor.fetchone()
+        mydb.free_result()
+        mycursor.close()
         return record
 
 
@@ -299,6 +335,14 @@ def userIsAdmin(userID):
         return int(userRecord[9])
     return False
 
+def userPubList(userID):
+        mycursor = mydb.cursor(buffered=True)
+        query = """ select  folder_name from finshedProjects where userID = %s and published = %s """
+        mycursor.execute(query, (userID, "1"))
+        record = mycursor.fetchall()
+        folders = [ x[0] for x in record]
+        print(folders)
+        return folders
 
 
 def randString():
@@ -348,32 +392,29 @@ def createAccount():
        
 
 
-
+'''
 @app.route("/get_users", methods=['GET'])
 def getUsers():
-    if userIsAdmin(request.cookies.get("admin")):
-        mycursor = mydb.cursor()
-        query = "select * from users"
+    if userIsAdmin(request.cookies.get("userID")):
+        mycursor = mydb.cursor(buffered=True)
+        query = "select email, name , phone from users"
         mycursor.execute(query)
         records = mycursor.fetchall()
         #might be a good idea to put address in here
-        if userIsAdmin(request.cookies.get("userID")):
-            users = []
-            for record in records:  
-                user = {
-                    "email" : record[0],
-                    "name" : record[1],
-                    "phone" : record[2]
-                }
-                users.append(user)
+        users = []
+        for record in records:  
+            user = {
+                "email" : record[0],
+                "name" : record[1],
+                "phone" : record[2]
+            }
+            users.append(user)
 
-            userJson = json.dumps(users)
-            mycursor.close()
-            return  userJson
+        userJson = json.dumps(users)
+        return  userJson
 
     return "auth error"
-
-
+'''
 
 
 

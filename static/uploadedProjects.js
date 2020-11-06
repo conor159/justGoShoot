@@ -31,6 +31,16 @@ $(function () {
             }
 
         });
+
+        userEmails = users.map(user => user.email);
+        $('#autocomplete').autocomplete({
+            lookup: userEmails,
+            onSelect: function (suggestion) {
+                console.log(userEmails);
+            }
+
+        });
+
     });
 });
 
@@ -65,7 +75,8 @@ $(document).on("change", ".pubCheckbox", function(){
 
     }
 });
-    
+
+/*
    $.getJSON("/get_users", function(users){
        // for autocomplete user email in upload 
 
@@ -77,3 +88,4 @@ $(document).on("change", ".pubCheckbox", function(){
             }
         });
    });
+*/
