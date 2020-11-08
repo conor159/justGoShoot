@@ -20,7 +20,8 @@ mydb = mysql.connector.connect(
     host='localhost',
     user='admin',
     password='ThisIsMysqlLogin2020!',
-    database='justGoShootDB'
+    database='justGoShootDB', 
+    buffered = True
 )
 cursor = mydb.cursor(buffered=True)
 
@@ -188,18 +189,23 @@ def photo_upload():
 @app.route("/uploaded_images/<folderName>/<fileName>" )
 def uploaded_images(folderName, fileName):
     userID = request.cookies.get("userID")
+    #for goodness sake dont remove the line below out of sync errors
+    mydb.free_result()
     if userIsAdmin(userID):
         return send_from_directory( os.path.join(app.instance_path, folderName), fileName )
 
-    mycursor = mydb.cursor(buffered=True)
-    query = """ select userID  from finshedProjects where folder_name = %s  and userID = %s     """
-    #check to see if user is autherised to view this folder
-    result = mycursor.execute(query,(folderName, userID))
-    mycursor.close()
+    else:
+        mycursor = mydb.cursor()
+        query = """ select userID  from finshedProjects where folder_name = %s  and userID = %s    """
+        #check to see if user is autherised to view this folder
+        mycursor.execute(query,(folderName, userID))
+        record = mycursor.fetchone()
 
+        if userID == record[0]:
+            print("fileName: ", fileName)
+            mycursor.close()
+            return send_from_directory( os.path.join(app.instance_path, folderName), fileName )
 
-    if userID == result[0]:
-        return send_from_directory( os.path.join(app.instance_path, folderName), fileName )
     return ""
 
 
@@ -227,7 +233,6 @@ def fin_projects_json():
             }
             folders.append(folderDict)
         fileListJson = json.dumps(folders)
-        print(fileListJson)
         return fileListJson
 
     # return all users info and thumbnail
@@ -321,7 +326,7 @@ def createUser():
 def getUserRecordByID(userID):
         mycursor = mydb.cursor(buffered=True)
         query = """select email , name , phone , eircode , county, addr3 , addr2 , addr1, password , admin , userID  from users where userID=%s    """
-        mycursor.execute(query, (userID,))
+        mycursor.execute(query, (userID,) , multi=True)
         record = mycursor.fetchone()
         mydb.free_result()
         mycursor.close()
@@ -329,11 +334,18 @@ def getUserRecordByID(userID):
 
 
 def userIsAdmin(userID):
-    userRecord =  getUserRecordByID(userID)
-    if(userRecord):
-        #fix without row index later 
-        return int(userRecord[9])
+    mycursor = mydb.cursor(buffered=True)
+    query = """select admin from users where userID=%s    """
+    mycursor.execute(query, (userID,) , multi=True)
+    record = mycursor.fetchone()
+    #userRecord =  getUserRecordByID(userID)
+    #fix without row index later 
+    if not record:
+        return False
+    if record[0] == '1':
+        return True
     return False
+
 
 def userPubList(userID):
         mycursor = mydb.cursor(buffered=True)

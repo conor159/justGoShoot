@@ -21,8 +21,23 @@ $(function (){
         $listOfFiles = firstFolder["files"];
 
 
-        $.each($listOfFiles , function(inc , item){
-            //eh right need to fill in the images one at  time
+        $.each($listOfFiles , function(inc , fileName){
+            console.log(fileName);
+            var rowCount = 1;
+            var colCount = 1;
+            //in here put in images put that in 3 times before the new row 
+            if(  colCount % 3 == 0){
+                $("#imageCollection").append($("<div class='row'></div>"));
+            }
+
+            var path =    "/uploaded_images/" + $folderName + "/" + fileName ;
+            //leading slash important 
+            //imageHtml = '<div class="col"> <img class = "lazy" data-src='  + path + ' id="' + fileName  + '></img> </div>';
+
+            $('.row').prepend( "<div class = 'col'> </div>");
+            $('.col').append($('<img>',{id: fileName ,src: path}))
+            /// <img class="lazy" data-src="uploaded_images/testFolder1/Screenshot_from_2020-10-15_16-25-35.png" id="Screenshot_from_2020-10-15_16-25-35.png"> 
+            colCount++;
 
         });
 
