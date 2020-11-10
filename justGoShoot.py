@@ -1,10 +1,9 @@
 #!/usr/bin/python3
 import yagmail
-import mysql.connector
+#import mysql.connector
 from flask import Flask, render_template, request , url_for , redirect ,session ,g  , flash , send_from_directory  ,send_file, make_response , Response
 from werkzeug.utils import secure_filename
 from functools import wraps
-import psutil
 import pieMaker
 import os
 from os import  listdir
@@ -14,16 +13,9 @@ import bcrypt
 import random
 import json
 import string
+import psutil
+from  flask_mysqldb import  MySQL
 
-#mysql login 
-mydb = mysql.connector.connect(
-    host='localhost',
-    user='admin',
-    password='ThisIsMysqlLogin2020!',
-    database='justGoShootDB', 
-    buffered = True
-)
-cursor = mydb.cursor(buffered=True)
 
 #app = Flask(__name__)
 app = Flask(__name__, instance_path='/home/conor/justGoShoot/justGoShoot/uploaded_images')
@@ -31,8 +23,14 @@ app.secret_key="7:b]&E3K~8?_UK[2"
 app.config['UPLOAD_EXTENSIONS'] = ['.jpg', '.png', '.gif']
 app.config["UPLOAD_PATH"] = "uploaded_images" #where finshed clinet photos go for a while
 
+app.config['MYSQL_HOST'] = 'localhost'
+app.config['MYSQL_USER'] = 'admin'
+app.config['MYSQL_PASSWORD'] = 'ThisIsMysqlLogin2020!'
+app.config['MYSQL_DB'] = 'justGoShootDB'
+mydb = MySQL(app)
+
 adminEmail = "conornugent96@gmail.com"
-emailPassword = ""
+emailPassword = "put back in in prod "
 justGoShootLink  = "http://127.0.0.1:5000"
 
 
@@ -100,12 +98,13 @@ def admin_login():
     email = request.form['email']
     userPassword = request.form['password']
     userIDCookie = request.cookies.get("userID")
-    mycursor = mydb.cursor(buffered=True)
+    mycursor = mydb.connect.cursor()
 
     query = """select email , name , phone , eircode , county , addr3 , addr2 , addr1 , password  , admin , userID from users where email=%s    """
     mycursor.execute( query , (email,))
     record = mycursor.fetchone()
     hashedPasswordMatch = checkPassword(userPassword, record[8])
+    
 
     if record[9] == "1" and hashedPasswordMatch: 
         resp =  make_response( render_template("admin_loged_in_page.html",  storage = storage() ))
@@ -188,24 +187,29 @@ def photo_upload():
 
 @app.route("/uploaded_images/<folderName>/<fileName>" )
 def uploaded_images(folderName, fileName):
-    userID = request.cookies.get("userID")
-    #for goodness sake dont remove the line below out of sync errors
-    mydb.free_result()
-    if userIsAdmin(userID):
+    #user is authed for folder stop bothering mysql
+    if session.get(folderName):
         return send_from_directory( os.path.join(app.instance_path, folderName), fileName )
 
-    else:
-        mycursor = mydb.cursor()
-        query = """ select userID  from finshedProjects where folder_name = %s  and userID = %s    """
-        #check to see if user is autherised to view this folder
-        mycursor.execute(query,(folderName, userID))
-        record = mycursor.fetchone()
+    #check to see if user is autherised to view this folder if so create session
+    userID = request.cookies.get("userID")
+    mycursor = mydb.connect.cursor()
+    query = """ select userID  from finshedProjects where folder_name = %s  and userID = %s  and published = %s  """
+    mycursor.execute(query,(folderName, userID, "1"))
+    record = mycursor.fetchone()
 
-        if userID == record[0]:
-            print("fileName: ", fileName)
-            mycursor.close()
-            return send_from_directory( os.path.join(app.instance_path, folderName), fileName )
+    if userID == record[0]:
+        session[folderName] = folderName
+        print("fileName: ", fileName)
+        mycursor.close()
+        return send_from_directory( os.path.join(app.instance_path, folderName), fileName )
 
+    elif userIsAdmin(userID):
+        #lets admin view non published files put in last 
+        mycursor.close()
+        return send_from_directory( os.path.join(app.instance_path, folderName), fileName )
+
+    mycursor.close()
     return ""
 
 
@@ -223,7 +227,7 @@ def fin_projects_json():
     # get a list of folders that the user is autherised to view 
     if listOfAuthFolders: 
         folders = []
-        print(listOfAuthFolders)
+        #print(listOfAuthFolders)
         for folder in listOfAuthFolders:
             #go though the folders and return json 
             filesList = listdir( os.path.join(app.config['UPLOAD_PATH'] , folder ))
@@ -240,7 +244,7 @@ def fin_projects_json():
         users = []
         #table stuff
 
-        mycursor = mydb.cursor()
+        mycursor = mydb.connect.cursor()
         query = """  select u.name, u.phone, fin.pubDate, fin.folder_name, fin.published , u.email from users as u , finshedProjects as fin where u.userId = fin.userId """
         mycursor.execute( query )
         records = mycursor.fetchall()
@@ -270,7 +274,7 @@ def publish():
     emailText = ""
     if userIsAdmin(request.cookies.get("userID")):
         folderName = request.form['folder_name']
-        mycursor = mydb.cursor()
+        mycursor = mydb.connect.cursor()
         val = ( folderName,) #grrr tupple with only one item needs a , mysql excute requires tups
         query = " update finshedProjects set published = 1 where folder_name = %s "
         mycursor.execute( query , val)
@@ -281,7 +285,6 @@ def publish():
         mycursor.execute( query , val)
         userEmail = mycursor.fetchone()
         userEmail = userEmail[0]
-        mydb.free_result()
         
     return ""
 
@@ -324,19 +327,18 @@ def createUser():
 
 
 def getUserRecordByID(userID):
-        mycursor = mydb.cursor(buffered=True)
+        mycursor = mydb.connect.cursor()()
         query = """select email , name , phone , eircode , county, addr3 , addr2 , addr1, password , admin , userID  from users where userID=%s    """
-        mycursor.execute(query, (userID,) , multi=True)
+        mycursor.execute(query, (userID,) )
         record = mycursor.fetchone()
-        mydb.free_result()
         mycursor.close()
         return record
 
 
 def userIsAdmin(userID):
-    mycursor = mydb.cursor(buffered=True)
     query = """select admin from users where userID=%s    """
-    mycursor.execute(query, (userID,) , multi=True)
+    mycursor = mydb.connect.cursor()
+    mycursor.execute(query, (userID,) )
     record = mycursor.fetchone()
     #userRecord =  getUserRecordByID(userID)
     #fix without row index later 
@@ -348,12 +350,12 @@ def userIsAdmin(userID):
 
 
 def userPubList(userID):
-        mycursor = mydb.cursor(buffered=True)
+        mycursor = mydb.connect.cursor()
         query = """ select  folder_name from finshedProjects where userID = %s and published = %s """
         mycursor.execute(query, (userID, "1"))
         record = mycursor.fetchall()
         folders = [ x[0] for x in record]
-        print(folders)
+        mycursor.close()
         return folders
 
 
@@ -368,7 +370,7 @@ def randString():
 
 
 def createSetupToken(email , token):
-    mycursor = mydb.cursor()
+    mycursor = mydb.connect.cursor()
     query = """insert into setupTokens ( email , token ) values (  %s , %s)"""
     mycursor.execute( query , (email, token))
     mydb.commit()
@@ -379,7 +381,7 @@ def createSetupToken(email , token):
 def firstLogin():
     #lookup db to see if link they clicked in email has a matching email
     token  = request.args.get("token")
-    mycursor = mydb.cursor()
+    mycursor = mydb.connect.cursor()()
     query = """select email, token from setupTokens where token = %s """
     mycursor.execute( query , (token,))
     tokenResult = mycursor.fetchone()
@@ -408,7 +410,7 @@ def createAccount():
 @app.route("/get_users", methods=['GET'])
 def getUsers():
     if userIsAdmin(request.cookies.get("userID")):
-        mycursor = mydb.cursor(buffered=True)
+        mycursor = mydb.connect.cursor()(buffered=True)
         query = "select email, name , phone from users"
         mycursor.execute(query)
         records = mycursor.fetchall()
@@ -460,7 +462,7 @@ def accountForm():
 
         #finaly adding user to db
         userID = randString()
-        mycursor = mydb.cursor()
+        mycursor = mydb.connect.cursor()
         query = """ insert into  users  (email , name,  phone,  eircode,   county ,addr3, addr2,  addr1 , password, admin , userID) values   ( %s, %s ,%s, %s, %s, %s, %s, %s,%s,%s, %s  )"""
         mycursor.execute( query , ( email , name , phone ,eircode , county, addr3, addr2, addr1, genPassword(password) , "0" ,  userID))
 
@@ -487,7 +489,7 @@ def contactEmail(toEmail,subjectText, content):
 
 
 def addEnteryToFinProjects( folder_name, email):
-    mycursor = mydb.cursor()
+    mycursor = mydb.connect.cursor()
     pubDate = time.time()
 
     query = """select users.userID  from users where email  =  %s  """

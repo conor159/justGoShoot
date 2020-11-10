@@ -29,7 +29,6 @@ $(function () {
             if( $published == "1"){
                 $("#pubCb_" + $folderName  ).prop('disabled', "readonly");
             }
-
         });
 
         userEmails = users.map(user => user.email);
@@ -38,9 +37,7 @@ $(function () {
             onSelect: function (suggestion) {
                 console.log(userEmails);
             }
-
         });
-
     });
 });
 
