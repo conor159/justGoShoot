@@ -1,6 +1,8 @@
 var imageCount = 0;
 var pageNumber = 1;
-var imagesPerPage = 9;
+var rowSize = 4;
+var imagesPerPage = rowSize * 2;
+
 
 var listOfFinProjGb;
 $(function (){
@@ -26,6 +28,9 @@ $(function (){
         //need to wait untill json has loaded you idiot
         firstNImages(brakePoint = imagesPerPage, selFolderVal = 0);
     });
+
+    // work out the number of pages needed then generate a image nav with required number of links 
+    //$("#pageNum0").after('<li id="pageNum1" class="page-item"><a class="page-link" href="#"><span>2</span></a></li>');
 
 
     $("#folderSelect").change(function(){
@@ -54,19 +59,42 @@ $(function (){
     });
 
     $("#next").on("click", function () {
-        $('#gallery').empty();
-        pageNumber += 1;
-        brakePoint = imagesPerPage * pageNumber;
-        //console.log("imagesPerPage: " + imagesPerPage + " brakePoint: " +  brakePoint + " pageNumber: " +   pageNumber +  " rowCount: " + rowCount +  " imageCount: " + imageCount + " listOfFiles: " + listOfFiles.length );
-        firstNImages(brakePoint , selFolderVal = $('#folderSelect').val() );
+        next();
     });
+
+
+
 });
 
+function genNavLinks( ){
+    //folder select might not exist deal with later
+    selFolder = listOfFinProjGb[ $('#folderSelect').val() ]; 
+    listOfFiles = selFolder["files"];
+    numOfPages =   Math.ceil( listOfFiles.length / imagesPerPage);
+    for(var i = 1; i < numOfPages; i++){
+        $("#pageNum" + i  ).remove();
+    }
+
+    for(var i = 1; i < numOfPages; i++){
+        $("#numNav" ).before('<li id="pageNum' + i + '" class="page-item"><a class="page-link" href="#"><span>'+ (pageNumber + i -1 ) + '</span></a></li>');
+    }
+}
+
+function next(){
+    $('#gallery').empty();
+    pageNumber += 1;
+    brakePoint = imagesPerPage * pageNumber;
+    //console.log("imagesPerPage: " + imagesPerPage + " brakePoint: " +  brakePoint + " pageNumber: " +   pageNumber +  " rowCount: " + rowCount +  " imageCount: " + imageCount + " listOfFiles: " + listOfFiles.length );
+    firstNImages(brakePoint , selFolderVal = $('#folderSelect').val() );
+
+}
 
 
 
 
 function firstNImages(brakePoint, selFolderVal){
+    genNavLinks();
+
     rowCount=0;
     colCount=0;
     selFolder = listOfFinProjGb[selFolderVal];
@@ -95,26 +123,20 @@ function firstNImages(brakePoint, selFolderVal){
     //console.log("ImagesPerPage: " + imagesPerPage + " brakePoint: " +  brakePoint + " pageNumber: " +   pageNumber +  " rowCount: " + rowCount +  " imageCount: " + imageCount + " listOfFiles: " + listOfFiles.length );
     while( imageCount < brakePoint && imageCount < listOfFiles.length ){
         fileName = listOfFiles[imageCount];
-        //col width of 3 
-        //I need to rewrite this weid stuff with rows going missing on image per page 10 
-        console.log(imageCount % 3);
-        if(  imageCount % 3 == 0){
-            console.log("createing a new row :" +  imageCount % 3);
+        if(  imageCount % rowSize == 0){
             rowCount++;
             $("#gallery").append($("<div id='row"+rowCount + "'" + " class='row'></div>"));
         }
 
         var path = "/uploaded_images/" + folderName + "/" + fileName ;
-        console.log(path + " " + pageNumber);
+        //console.log(path + " " + pageNumber);
         $("#" + "row" + rowCount).append( "<div id ="+ imageCount +" class = 'col'> </div>");
         $("#" + imageCount  ).append($('<img>',{id: fileName ,src: path, class: "lazy"}))
         imageCount++
         colCount ++
 
     }
-    console.log("ImagesPerPage: " + imagesPerPage + " brakePoint: " +  brakePoint + " pageNumber: " +   pageNumber +  " rowCount: " + rowCount +  " imageCount: " + imageCount + " listOfFiles: " + listOfFiles.length + " colCount: " + colCount);
+    //console.log("ImagesPerPage: " + imagesPerPage + " brakePoint: " +  brakePoint + " pageNumber: " +   pageNumber +  " rowCount: " + rowCount +  " imageCount: " + imageCount + " listOfFiles: " + listOfFiles.length + " colCount: " + colCount);
 };
 
 
-//need to 
-//on click plus incement image count by breakpoint * page number and then clear and reset page-->
