@@ -114,3 +114,12 @@ tr:nth-child(even) {
 #createUserSub{
     width:  174px;
 }
+
+#gallery{
+    background-color: white;
+}
+
+#gallery img{
+    padding-top: 25px;
+    padding-bottom: 25px;
+}
