@@ -1,6 +1,6 @@
 var imageCount = 0;
 var pageNumber = 1;
-var rowSize = 4;
+var rowSize = 3;
 var imagesPerPage = rowSize * 2;
 
 
@@ -43,10 +43,8 @@ $(function (){
 
 
     $("#prev").on("click", function () {
-        $('#gallery').empty();
         pageNumber--;
-        imageCount =  imageCount- (colCount + imagesPerPage)
-
+        imageCount =  imageCount- (colCount + imagesPerPage);
         brakePoint = imagesPerPage * pageNumber;
 
         if( imageCount < imagesPerPage ||pageNumber == 1){
@@ -67,21 +65,42 @@ $(function (){
 });
 
 function genNavLinks( ){
+    var imageLiMax = 4;
     //folder select might not exist deal with later
     selFolder = listOfFinProjGb[ $('#folderSelect').val() ]; 
     listOfFiles = selFolder["files"];
     numOfPages =   Math.ceil( listOfFiles.length / imagesPerPage);
-    for(var i = 1; i < numOfPages; i++){
+
+    for(var i = 1; i <= numOfPages; i++){
         $("#pageNum" + i  ).remove();
     }
+    lowerLimit = pageNumber - imageLiMax;
+    var windowSlider = 0;
 
-    for(var i = 1; i < numOfPages; i++){
-        $("#numNav" ).before('<li id="pageNum' + i + '" class="page-item"><a class="page-link" href="#"><span>'+ (pageNumber + i -1 ) + '</span></a></li>');
+    if( lowerLimit < 1 ){ 
+        windowSlider = lowerLimit * - 1;
+        lowerLimit = 1;
+    };
+
+    upperLimit = pageNumber + imageLiMax; 
+    if ( upperLimit >  numOfPages ){
+         upperLimit =  numOfPages;
+    };
+
+    console.log("low limit " + lowerLimit + " upperLImit "  + upperLimit  + " pageNumber " + pageNumber + " NumPages "   + numOfPages  );
+    for(var i = lowerLimit; i <= upperLimit; i++ ){
+        if(i == pageNumber){
+            $("#numNav" ).before('<li id="pageNum' + i + '" class="page-item active"><a onClick="clickedNum('+ i +')"  class="page-link" href="#"><span>'+  i  + '</span></a></li>');
+        }
+        else{
+            $("#numNav" ).before('<li id="pageNum' + i + '" class="page-item"><a onClick="clickedNum('+ i +')"  class="page-link" href="#"><span>'+  i  + '</span></a></li>');
+        }
     }
+
+
 }
 
 function next(){
-    $('#gallery').empty();
     pageNumber += 1;
     brakePoint = imagesPerPage * pageNumber;
     //console.log("imagesPerPage: " + imagesPerPage + " brakePoint: " +  brakePoint + " pageNumber: " +   pageNumber +  " rowCount: " + rowCount +  " imageCount: " + imageCount + " listOfFiles: " + listOfFiles.length );
@@ -90,11 +109,17 @@ function next(){
 }
 
 
+function clickedNum(pageNum){
+    firstNImages(brakePoint , selFolderVal = $('#folderSelect').val() );
+
+    }
+
+    
 
 
 function firstNImages(brakePoint, selFolderVal){
     genNavLinks();
-
+    $('#gallery').empty();
     rowCount=0;
     colCount=0;
     selFolder = listOfFinProjGb[selFolderVal];
