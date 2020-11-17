@@ -1,11 +1,12 @@
 #!/usr/bin/python3
 import yagmail
 #import mysql.connector
-from flask import Flask, render_template, request , url_for , redirect ,session ,g  , flash , send_from_directory  ,send_file, make_response , Response
+from flask import Flask, render_template, request , url_for , redirect ,session ,g  , flash , send_from_directory  ,send_file, make_response , Response, abort
 from werkzeug.utils import secure_filename
 from functools import wraps
 import pieMaker
 import os
+import shutil
 from os import  listdir
 import pathlib
 import time
@@ -14,13 +15,15 @@ import random
 import json
 import string
 import psutil
+from PIL import Image
 from  flask_mysqldb import  MySQL
+import tarfile
 
 
 #app = Flask(__name__)
 app = Flask(__name__, instance_path='/home/conor/justGoShoot/justGoShoot/uploaded_images')
 app.secret_key="7:b]&E3K~8?_UK[2"
-app.config['UPLOAD_EXTENSIONS'] = ['.jpg', '.png', '.gif']
+app.config['UPLOAD_EXTENSIONS'] = ['.jpg', '.png', '.gif', '.jpeg']
 app.config["UPLOAD_PATH"] = "uploaded_images" #where finshed clinet photos go for a while
 
 app.config['MYSQL_HOST'] = 'localhost'
@@ -170,86 +173,95 @@ def photo_upload():
         flash("missing parameter(s)")
         return render_template('admin_loged_in_page.html',  storage = storage() )
 
+
+    #need to genarate tar file and put that in root dir 
+    #need to put high res images in another folder
+
+    pathlib.Path(app.config['UPLOAD_PATH'] , folder_name, "highRes").mkdir(exist_ok=True, parents=True)
+    pathlib.Path(app.config['UPLOAD_PATH'], folder_name , "thumbnail"  ).mkdir(exist_ok=True, parents=True)
     for image in images:
         #create dir on dec then add photos to it 
         imageName = secure_filename(image.filename)
-        pathlib.Path(app.config['UPLOAD_PATH'], folder_name).mkdir(exist_ok=True)
         if imageName != "":
             imageExt = os.path.splitext(imageName)[1] 
             if imageExt not in app.config['UPLOAD_EXTENSIONS']:
-                abort(400)
+                abort(Response("image format not suported"))
             else:
-                image.save(os.path.join(app.config['UPLOAD_PATH'] ,  folder_name , imageName))
+                image.save(os.path.join(app.config['UPLOAD_PATH'] ,  folder_name ,"highRes", imageName))
+                compressedPath = os.path.join(app.config['UPLOAD_PATH'] ,  folder_name ,"thumbnail")
+                highResPath = os.path.join(app.config['UPLOAD_PATH'] ,  folder_name ,"highRes", imageName)
+                shutil.copy( highResPath , compressedPath)
+                imageCompress( compressedPath, imageName)
+
+    #need to generate a tar ball root folder
+    projectFolder = os.path.join(app.config['UPLOAD_PATH'] ,  folder_name )
+
+    with tarfile.open( projectFolder  + "/" + folder_name + ".tar" , "w"  ) as archive:
+        archive.add( projectFolder + "/highRes/" ,arcname="")
+
+
 
     addEnteryToFinProjects(folder_name,email)
     return render_template('admin_loged_in_page.html',  storage = storage() )
 
 
-@app.route("/uploaded_images/<folderName>/<fileName>" )
-def uploaded_images(folderName, fileName):
+
+
+@app.route("/uploaded_images/<folderName>/<highLow>/<fileName>" )
+def uploaded_images(folderName ,highLow,fileName):
+    print(highLow + " " + folderName +  " " + fileName + " test")
     #user is authed for folder stop bothering mysql
+    mycursor = mydb.connect.cursor()
+    userID = request.cookies.get("userID")
     if session.get(folderName):
-        return send_from_directory( os.path.join(app.instance_path, folderName), fileName )
+        return send_from_directory( os.path.join(app.instance_path, folderName , highLow), fileName )
+
+    if userIsAdmin(userID):
+        #lets admin view non published files put in last 
+        mycursor.close()
+        return send_from_directory( os.path.join(app.instance_path, folderName, highLow), fileName )
 
     #check to see if user is autherised to view this folder if so create session
-    userID = request.cookies.get("userID")
-    mycursor = mydb.connect.cursor()
+    #there is a function for this fix later
+    #need thumnails
+
+    print(userID + " " + folderName + " " )
     query = """ select userID  from finshedProjects where folder_name = %s  and userID = %s  and published = %s  """
     mycursor.execute(query,(folderName, userID, "1"))
     record = mycursor.fetchone()
+    if record is not None:
+        if userID == record[0]:
+            session[folderName] = folderName
+            print("fileName: ", fileName)
+            mycursor.close()
+            return send_from_directory( os.path.join(app.instance_path, folderName, "highRes"),  fileName )
 
-    if userID == record[0]:
-        session[folderName] = folderName
-        print("fileName: ", fileName)
-        mycursor.close()
-        return send_from_directory( os.path.join(app.instance_path, folderName), fileName )
-
-    elif userIsAdmin(userID):
-        #lets admin view non published files put in last 
-        mycursor.close()
-        return send_from_directory( os.path.join(app.instance_path, folderName), fileName )
 
     mycursor.close()
     return ""
 
+@app.route("/download/<folderName>", methods=["GET"])
+def download(folderName):
+    userID = request.cookies.get("userID") 
+    pubFolders = userPubList(userID)
+    #print( os.path.join(app.instance_path, (folderName+"/"+folderName + ".tar") ))
 
-@app.route("/fin_projects_json",  methods=["GET"])
-def fin_projects_json():
-    folderName = request.args.get('folder_name')
+    if folderName in pubFolders:
+        return send_file( as_attachment=True ,  mimetype="application/zip" , filename_or_fp = os.path.join(app.instance_path,  (folderName+"/"+folderName + ".tar") )  )
+    return "download eror"
+
+@app.route("/jsonOfImages",  methods=["GET"])
+def jsonOfImages():
     #return a list of files in folder  if supliyed a folder name
     admin = userIsAdmin(request.cookies.get("userID")) 
-    if admin and folderName:
-        filesList = listdir( os.path.join(app.config['UPLOAD_PATH'] , folderName ))
-        fileListJson = json.dumps(filesList)
-        return fileListJson
-
-    listOfAuthFolders = userPubList(request.cookies.get("userID"))
-    # get a list of folders that the user is autherised to view 
-    if listOfAuthFolders: 
-        folders = []
-        #print(listOfAuthFolders)
-        for folder in listOfAuthFolders:
-            #go though the folders and return json 
-            filesList = listdir( os.path.join(app.config['UPLOAD_PATH'] , folder ))
-            folderDict = {
-                "folderName" : folder,
-                "files" :  filesList
-            }
-            folders.append(folderDict)
-        fileListJson = json.dumps(folders)
-        return fileListJson
-
-    # return all users info and thumbnail
     if admin:
         users = []
-        #table stuff
-
         mycursor = mydb.connect.cursor()
         query = """  select u.name, u.phone, fin.pubDate, fin.folder_name, fin.published , u.email from users as u , finshedProjects as fin where u.userId = fin.userId """
         mycursor.execute( query )
         records = mycursor.fetchall()
         for record in records:  
-            filesList = listdir( os.path.join(app.config['UPLOAD_PATH'] , record[3] ))
+            filesList = listdir( os.path.join(app.config['UPLOAD_PATH'] , record[3], "highRes" ))
             user = {
                 "userName" : record[0],
                 "phone" : record[1],
@@ -264,7 +276,26 @@ def fin_projects_json():
         userJson = json.dumps(users)
         mycursor.close()
         return userJson
-    # where will later return user photos if published and pin is correct
+
+
+    listOfAuthFolders = userPubList(request.cookies.get("userID"))
+    # get a list of folders that the user is autherised to view 
+    if listOfAuthFolders: 
+        folders = []
+        #print(listOfAuthFolders)
+        for folder in listOfAuthFolders:
+            #go though the folders and return json 
+            filesList = listdir( os.path.join(app.config['UPLOAD_PATH'] , folder , "highRes"))
+
+            folderDict = {
+                "folderName" : folder,
+                "files" :  filesList
+            }
+            folders.append(folderDict)
+        fileListJson = json.dumps(folders)
+        return fileListJson
+
+    # return all users info and thumbnail
     return "auth error"
 
 
@@ -431,6 +462,10 @@ def getUsers():
 '''
 
 
+def imageCompress(compressedPath, imageName):
+    file = compressedPath + "/" + imageName
+    im = Image.open(file)
+    im.save(file  , optimize = True, quality=65)
 
 def storage():
     hdd = psutil.disk_usage('/')

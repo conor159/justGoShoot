@@ -1,13 +1,11 @@
 $(function () {
 
 
-   $.getJSON("/fin_projects_json", function(users){
+   $.getJSON("/jsonOfImages", function(users){
        //fills in table on admin page 
-       var checkBoxID = 0;
-
 
         $.each(users, function(user, values){
-            $thumbnail = values["files"]
+            $imageName = values["files"]
             $userName = values["userName"];
             $folderName = values["folderName"];
             $pubDate = values["pubDate"];
@@ -23,7 +21,7 @@ $(function () {
             userText = '<td > ' + $userName + '</td >' +  ' <td> '+ dateStr +'</td> '  + '<td>' + $folderName + "</td>" ;
 
 
-            $('<tr>  <td><img id=' + $folderName + '  src=' +"uploaded_images/"+ $folderName + '/' + $thumbnail +  '></td>   ' + userText +   checkBox + '  </tr>').appendTo('table , #uploadsTable');
+            $('<tr>  <td><img id=' + $folderName + '  src=' +"uploaded_images/"+ $folderName + '/thumbnail/' + $imageName +  '></td>   ' + userText +   checkBox + '  </tr>').appendTo('table , #uploadsTable');
             $("#pubCb_" + $folderName  ).prop('checked', Number( $published));
 
             if( $published == "1"){

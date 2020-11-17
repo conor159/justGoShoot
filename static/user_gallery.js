@@ -12,7 +12,7 @@ $(function (){
     //need a download high res thing
     //need a click on image thing with the socals
 
-    $.getJSON("/fin_projects_json", function(listOfFinProj){
+    $.getJSON("/jsonOfImages", function(listOfFinProj){
         listOfFinProjGb = listOfFinProj;
         if( listOfFinProj.length >1  ){
             $("#folderSelect").show();
@@ -119,7 +119,7 @@ function drawGallery(requestPage){
             $("#gallery").append($("<div id='row"+rowCount+ "'" + " class='row'></div>"));
         }
 
-        var path = "/uploaded_images/" + folderName + "/" + fileName ;
+        var path = "/uploaded_images/" + folderName + "/thumbnail/" + fileName ;
 
         $("#" + "row" + rowCount).append( "<div id ="+ imageIndex +" class = 'col'> </div>");
         $("#" + imageIndex  ).append($('<img>',{id: fileName ,src: path, class: "lazy"}))
